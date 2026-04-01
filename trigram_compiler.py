@@ -4,7 +4,7 @@
 Trigram-3 汇编器/编译器
 支持Trigram-3汇编语言的编译和反编译
 
-作者：Trigram-3项目组
+作者：TheManIII
 版本：1.0
 """
 

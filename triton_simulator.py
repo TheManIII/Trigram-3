@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Trigram-3 平衡三进制CPU模拟器
-基于平衡三进制（Balanced Ternary）的RISC架构
-遵循道法自然设计理念
+Trigram-3 平衡三进制 CPU 模拟器
+基于平衡三进制（Balanced Ternary）的 RISC 架构
 
-名称含义：Trigram-3（平衡三进制指令集）
-- 来源于先天八卦第三卦——离卦（☲）
-- 离为火，象征光明、智慧、文明
-- 三生万物，以三进制之光，照亮计算文明
-
-作者：Trigram-3项目组
+作者：TheManIII
 版本：1.0
 """
 
