@@ -45,3 +45,5 @@ htmlcov/
 *.tmp
 temp/
 tmp/
+__pycache__/
+.vscode/
