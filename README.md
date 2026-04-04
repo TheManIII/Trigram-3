@@ -22,14 +22,7 @@
 
 ## 快速开始
 
-### 安装
-
-无需额外依赖，只需 Python 3.7+：
-
-```bash
-git clone <repository>
-cd Trigram-3
-```
+无需额外依赖，只需 Python
 
 ### 运行模拟器
 
