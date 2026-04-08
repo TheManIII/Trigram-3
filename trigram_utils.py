@@ -212,16 +212,22 @@ def parse_instruction(instruction: str) -> dict:
     imm_trits = instruction[9:27]
 
     # 解析立即数（包含可能的rs2）
-    full_imm = balanced_ternary_to_int(imm_trits)
+    # 使用三进制切片操作,而非二进制位运算
 
     # 检查是否包含rs2（低3 trit）
     rs2 = None
-    imm = full_imm
+    imm = 0
     if opcode in ['001', '100', '0T0']:  # ADD, CMP, STORE
-        rs2_value = full_imm & 0x7  # 低3位
-        if rs2_value != 0:
-            rs2 = trits_to_reg(int_to_balanced_ternary_str(rs2_value, 3))
-        imm = full_imm >> 3
+        # 提取低3 trit作为rs2编码
+        rs2_trits = imm_trits[-3:]  # 三进制切片
+        rs2 = trits_to_reg(rs2_trits)
+
+        # 提取高15 trit作为立即数
+        imm_high_trits = imm_trits[:-3]
+        imm = balanced_ternary_to_int(imm_high_trits)
+    else:
+        # 其他指令: 整个18 trit都是立即数
+        imm = balanced_ternary_to_int(imm_trits)
 
     return {
         'opcode': opcode,

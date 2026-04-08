@@ -71,7 +71,12 @@ class BalancedTernary:
             self.trits = self._int_to_trits(value, width)
 
     def _int_to_trits(self, value: int, width: int) -> List[Trit]:
-        """将整数转换为平衡三进制（高位在前）"""
+        """将整数转换为平衡三进制（高位在前）
+
+        【外部接口】
+        此方法用于从十进制构造三进制数。
+        不应在核心三进制运算中使用。
+        """
         if value == 0:
             return [Trit.ZERO] * width
 
@@ -101,7 +106,12 @@ class BalancedTernary:
         return list(reversed(trits))
 
     def to_int(self) -> int:
-        """转换为整数值"""
+        """转换为整数值
+
+        【外部接口】
+        此方法用于输出显示和与外部系统交互。
+        不应在核心三进制运算中使用,应使用三进制算术单元。
+        """
         value = 0
         power = 1
         for trit in reversed(self.trits):
@@ -114,16 +124,51 @@ class BalancedTernary:
         return ''.join(str(t) for t in self.trits)
 
     def __add__(self, other: 'BalancedTernary') -> 'BalancedTernary':
-        """加法"""
-        return BalancedTernary(value=self.to_int() + other.to_int(), width=self.width)
+        """加法 - 使用三进制全加器
+
+        注意: 这是真正的三进制运算,不使用十进制转换
+        """
+        from ternary_logic import TernaryArithmetic, Trit
+
+        # 转为低位在前的 trit 列表
+        a = [Trit(trit.value) for trit in reversed(self.trits)]
+        b = [Trit(trit.value) for trit in reversed(other.trits)]
+
+        # 三进制加法
+        result, _ = TernaryArithmetic.add_trits(a, b)
+
+        # 转回高位在前
+        result_trits = [Trit(trit.value) for trit in reversed(result)]
+        return BalancedTernary(trits=result_trits, width=self.width)
 
     def __sub__(self, other: 'BalancedTernary') -> 'BalancedTernary':
-        """减法"""
-        return BalancedTernary(value=self.to_int() - other.to_int(), width=self.width)
+        """减法 - 使用三进制减法器
+
+        注意: 这是真正的三进制运算,不使用十进制转换
+        """
+        from ternary_logic import TernaryArithmetic, Trit
+
+        # 转为低位在前的 trit 列表
+        a = [Trit(trit.value) for trit in reversed(self.trits)]
+        b = [Trit(trit.value) for trit in reversed(other.trits)]
+
+        # 三进制减法
+        result, _ = TernaryArithmetic.subtract_trits(a, b)
+
+        # 转回高位在前
+        result_trits = [Trit(trit.value) for trit in reversed(result)]
+        return BalancedTernary(trits=result_trits, width=self.width)
 
     def __neg__(self) -> 'BalancedTernary':
-        """取反"""
-        return BalancedTernary(value=-self.to_int(), width=self.width)
+        """取反 - 逐位取反
+
+        注意: 这是真正的三进制运算,不使用十进制转换
+        """
+        from ternary_logic import TernaryLogic, Trit
+
+        # 逐位取反
+        negated = [Trit(TernaryLogic.NOT(Trit(trit.value)).value) for trit in self.trits]
+        return BalancedTernary(trits=negated, width=self.width)
 
     def __str__(self):
         return self.to_string()
@@ -469,7 +514,9 @@ class CPU:
             base = self.registers.read(rs1)
             # 使用imm的低9 trit作为偏移
             offset = BalancedTernary(trits=imm.trits[-9:], width=9)
-            addr = base.to_int() + offset.to_int()
+            # 使用三进制加法计算地址
+            addr_val = base + offset
+            addr = addr_val.to_int()  # 外部接口: 用于内存索引
             value = self.memory.read(addr)
             self.registers.write(rd, value)
 
@@ -479,7 +526,9 @@ class CPU:
             offset = BalancedTernary(trits=imm.trits[0:15], width=15)
             # 取偏移的低9 trit
             offset9 = BalancedTernary(trits=offset.trits[-9:], width=9)
-            addr = base.to_int() + offset9.to_int()
+            # 使用三进制加法计算地址
+            addr_val = base + offset9
+            addr = addr_val.to_int()  # 外部接口: 用于内存索引
             val2 = self.registers.read(rs2)
             if self.verbose:
                 print(f"    STORE: base={base.to_int()}, offset={offset9.to_int()}, addr={addr}, val={val2.to_int()}")
@@ -487,10 +536,15 @@ class CPU:
 
         elif opcode == '01T':  # ABS
             val1 = self.registers.read(rs1)
+            # 使用三进制绝对值运算
+            from ternary_logic import TernaryArithmetic, Trit
+
+            # 转为高位在前的 trit 列表
+            trits_high_first = [Trit(trit.value) for trit in val1.trits]
             # 计算绝对值
-            int_val = val1.to_int()
-            abs_val = abs(int_val)
-            result = BalancedTernary(value=abs_val, width=9)
+            abs_trits = TernaryArithmetic.abs_trits(trits_high_first)
+            # 转回 BalancedTernary
+            result = BalancedTernary(trits=[Trit(t.value) for t in abs_trits], width=9)
             self.registers.write(rd, result)
 
         elif opcode == '0T1':  # NEG
@@ -502,19 +556,21 @@ class CPU:
         elif opcode == '100':  # CMP
             val1 = self.registers.read(rs1)
             val2 = self.registers.read(rs2)
-            diff = val1.to_int() - val2.to_int()
+            # 使用三进制比较运算
+            from ternary_logic import TernaryArithmetic, Trit
+
+            # 转为高位在前的 trit 列表
+            a = [Trit(trit.value) for trit in val1.trits]
+            b = [Trit(trit.value) for trit in val2.trits]
+            # 比较
+            cmp_result = TernaryArithmetic.compare_trits(a, b)
             # 设置标志：T(负), 0(零), 1(正)
-            if diff < 0:
-                flag = BalancedTernary(value=-1, width=9)
-            elif diff > 0:
-                flag = BalancedTernary(value=1, width=9)
-            else:
-                flag = BalancedTernary(value=0, width=9)
+            flag = BalancedTernary(value=cmp_result.value, width=9)
             self.registers.write(rd, flag)
 
         elif opcode == 'T00':  # TJUMP
             flag = self.registers.read(rd)
-            flag_val = flag.to_int()
+            flag_val = flag.to_int()  # 外部接口: 用于分支判断
 
             # 计算跳转目标
             # Imm分为3×5 trit: [off_T][off_0][off_1]
@@ -529,9 +585,20 @@ class CPU:
             # 将5 trit转换为9 trit(保持符号)
             offset = BalancedTernary(trits=offset_trits, width=9)
 
-            # 跳转（offset是相对偏移，单位为条指令）
-            new_pc = self.pc.to_int() + offset.to_int() * 3
-            self.pc = BalancedTernary(value=new_pc, width=9)
+            # 使用三进制运算计算新PC
+            # offset * 3 可以通过三进制左移实现
+            from ternary_logic import TernaryArithmetic, Trit
+
+            # 转为低位在前
+            offset_low = [Trit(t.value) for t in reversed(offset.trits)]
+            # 左移1位(×3)
+            offset_shifted = [Trit.ZERO] + offset_low[:-1]
+            # 转回高位在前
+            offset_3 = BalancedTernary(trits=[Trit(t.value) for t in reversed(offset_shifted)], width=9)
+
+            # 三进制加法
+            new_pc_val = self.pc + offset_3
+            self.pc = new_pc_val
 
         else:
             self.halt(f"非法操作码: {opcode}")
@@ -562,8 +629,10 @@ class CPU:
 
         # 更新PC（TJUMP指令内部已经更新）
         if opcode != 'T00' and not self.halted:
-            new_pc = self.pc.to_int() + 3
-            self.pc = BalancedTernary(value=new_pc, width=9)
+            # 使用三进制加法更新PC
+            from ternary_logic import Trit
+            pc_step = BalancedTernary(trits=[Trit.ZERO]*6 + [Trit.POS, Trit.ZERO, Trit.ZERO], width=9)  # 3
+            self.pc = self.pc + pc_step
 
         self.cycle_count += 1
 
