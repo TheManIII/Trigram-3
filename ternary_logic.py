@@ -295,21 +295,21 @@ class TernaryArithmetic:
     @staticmethod
     def full_adder(a: Trit, b: Trit, carry_in: Trit) -> Tuple[Trit, Trit]:
         """三进制全加器
-        
+
         输入: a, b, carry_in (各1 trit)
         输出: (sum, carry_out)
-        
-        实现: 两个半加器级联
+
+        实现: 两个半加器级联,进位需要相加
         """
         # 第一级: a + b
         sum1, carry1 = TernaryArithmetic.half_adder(a, b)
-        
+
         # 第二级: sum1 + carry_in
         sum2, carry2 = TernaryArithmetic.half_adder(sum1, carry_in)
-        
-        # 进位合并: carry_out = MAX(carry1, carry2)
-        carry_out = TernaryLogic.MAX(carry1, carry2)
-        
+
+        # 进位合并: carry_out = carry1 + carry2
+        carry_out, _ = TernaryArithmetic.half_adder(carry1, carry2)
+
         return (sum2, carry_out)
     
     # -------------------------------------------------------------------------
